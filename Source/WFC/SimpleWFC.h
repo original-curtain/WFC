@@ -75,7 +75,7 @@ public:
 	ASimpleWFC(const FObjectInitializer& ObjectInitializer);
 	~ASimpleWFC();
 
-	TQuadTree<uint32>* CellIndexTree;
+	TQuadTree<uint32>* CellLIndexTree;
 
 	UPROPERTY(EditAnywhere,BlueprintReadOnly,Category="SimpleWFC")
 	int32 RandSeed=0;
@@ -85,7 +85,7 @@ public:
 	TArray<FProto> ProtoDataList;
 
 	UFUNCTION(BlueprintCallable,Category="SimpleWFC")
-	void CollapseCellByIndex(int32 CellIndex);
+	void CollapseCellByIndex(int32 cellIndex);
 	UFUNCTION(BlueprintCallable, Category = "SimpleWFC")
 	bool Observation(const FWFCCell& LastPropagationCell,FWFCCell& CurrPropagationCell,const int32& DirectionIndex);
 

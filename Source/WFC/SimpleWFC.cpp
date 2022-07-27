@@ -30,7 +30,7 @@ ASimpleWFC::ASimpleWFC(const FObjectInitializer& ObjectInitializer)
 	const FVector2D& MaxLoc=FVector2D(HalfObjectSize*100);
 	const FBox2D& RootBox=FBox2D(MinLoc,MaxLoc);
 
-	CellIndexTree=new TQuadTree<uint32>(RootBox);
+	CellLIndexTree =new TQuadTree<uint32>(RootBox);
 
 	ObjectSize=ObjectBoundBoxSize/CellSize;
 	uint32 CellNum=ObjectSize*ObjectSize;
@@ -177,7 +177,7 @@ ASimpleWFC::ASimpleWFC(const FObjectInitializer& ObjectInitializer)
 	}
 
 	CellList.Reset();
-	CellIndexTree->Empty();
+	CellLIndexTree->Empty();
 	for (int32 y = 0; y < ObjectSize; y++)
 	{
 		for (int32 x = 0; x < ObjectSize; x++)
@@ -196,23 +196,172 @@ ASimpleWFC::ASimpleWFC(const FObjectInitializer& ObjectInitializer)
 			const FVector2D& CellMinLoc=FVector2D(x*CellSize*100-HalfObjectSize,y*CellSize*100-HalfObjectSize);
 			const FVector2D& CellMaxLoc = FVector2D(x * CellSize * 100 - HalfObjectSize + CellSize, y * CellSize * 100 - HalfObjectSize + CellSize);
 			const FBox2D& CellBox = FBox2D(CellMinLoc, CellMaxLoc);
-			CellIndexTree->Insert(x + y * ObjectSize, CellBox);
+			CellLIndexTree->Insert(x + y * ObjectSize, CellBox);
 		}
 	}
 }
 
 ASimpleWFC::~ASimpleWFC()
 {
-	if (CellIndexTree != nullptr)
+	if (CellLIndexTree != nullptr)
 	{
-		CellIndexTree->Empty();
-		delete(CellIndexTree);
-		CellIndexTree = nullptr;
+		CellLIndexTree->Empty();
+		delete(CellLIndexTree);
+		CellLIndexTree = nullptr;
+	}
+}
+
+void ASimpleWFC::CollapseCellByIndex(int32 cellIndex)
+{
+	if (cellIndex < CellList.Num())
+	{
+		FProto* CollapseProto = CellList[cellIndex].PotentialProto[UKismetMathLibrary::RandomIntegerInRangeFromStream(0, CellList[cellIndex].PotentialProto.Num() - 1, SimpleWFCCreateStream)];
+		CellList[cellIndex].PotentialProto.Reset();
+		CellList[cellIndex].PotentialProto.Add(CollapseProto);
+		CellList[cellIndex].bCollapse = true;
+
+		LastPropagationCellsArray.Add(&CellList[cellIndex]);
+		Propagation();
 	}
 }
 
 bool ASimpleWFC::Observation(const FWFCCell& LastPropagationCell, FWFCCell& CurrPropagationCell, const int32& DirectionIndex)
 {
-	return false;
+	LastPropagationCellsArray.Reset();
+
+	TArray<FProto*>TempList;
+	TempList.Reset();
+
+	TArray<EProtoType>* DesireProtoNeighborTypeListPtr = nullptr;
+	for (FProto* LastCellDesireProto : LastPropagationCell.PotentialProto)
+	{
+		switch (DirectionIndex)
+		{
+			case 0: DesireProtoNeighborTypeListPtr = &LastCellDesireProto->NeighborTypeList_PX; break;//px
+			case 1: DesireProtoNeighborTypeListPtr = &LastCellDesireProto->NeighborTypeList_NX; break;//nx
+			case 2: DesireProtoNeighborTypeListPtr = &LastCellDesireProto->NeighborTypeList_PY; break;//py
+			case 3: DesireProtoNeighborTypeListPtr = &LastCellDesireProto->NeighborTypeList_NY; break;//ny
+			default: break;//error
+		}
+
+		for (const EProtoType& t : *DesireProtoNeighborTypeListPtr)
+		{
+			uint8 index = (uint8)t;
+			if (index < ProtoDataList.Num())
+			{
+				FProto* toAddProto = &ProtoDataList[index];
+
+				bool bFind = false;
+				for (FProto* potenProto : CurrPropagationCell.PotentialProto)
+				{
+					if (toAddProto == potenProto)
+					{
+						bFind = true;
+						break;
+					}
+				}
+				if (bFind == true)
+					TempList.AddUnique(toAddProto);
+			}
+		}
+	}
+
+	if (TempList.Num() == 0)
+	{
+		return true;
+	}
+	CurrPropagationCell.PotentialProto.Reset();
+	for (FProto* proto : TempList) CurrPropagationCell.PotentialProto.Add(proto);
+	TempList.Reset();
+
+	if (CurrPropagationCell.PotentialProto.Num() == 1)
+	{
+		CurrPropagationCell.bCollapse = true;
+	}
+
+	if (CurrPropagationCell.PotentialProto.Num() >= ProtoDataList.Num())
+		return false;
+	else
+		return true;
+}
+
+void ASimpleWFC::Propagation()
+{
+	TArray<FWFCCell*>* LastPropagationCellsArrayPtr = &LastPropagationCellsArray;
+	TArray<FWFCCell*>* CurrPropagationCellsArrayPtr = &CurrPropagationCellsArray;
+
+	CurrPropagationCellsArrayPtr->Reset();
+
+	//每次Propagation之前先清理掉所有的cell的标记,防止一个cell被多次计算
+	for (FWFCCell& cell : CellList)
+		cell.bDirty = false;
+
+	while (true)
+	{
+		if (LastPropagationCellsArrayPtr->Num() == 0)
+			break;
+
+		for (FWFCCell* LastPropagationCell : *LastPropagationCellsArrayPtr)
+		{
+			TArray<FWFCCell*>NeighborCells;
+			const FIntVector& Loc = LastPropagationCell->CellListLocation;
+			//PX
+			if (Loc.X + 1 < ObjectSize && CellList[Loc.X + 1 + Loc.Y * ObjectSize].bCollapse == false)
+				NeighborCells.Add(&CellList[Loc.X + 1 + Loc.Y * ObjectSize]);
+			else
+				NeighborCells.Add(nullptr);
+			//NX
+			if (Loc.X - 1 >= 0 && CellList[Loc.X - 1 + Loc.Y * ObjectSize].bCollapse == false)
+				NeighborCells.Add(&CellList[Loc.X - 1 + Loc.Y * ObjectSize]);
+			else
+				NeighborCells.Add(nullptr);
+			//PY
+			if (Loc.Y + 1 < ObjectSize && CellList[Loc.X + (Loc.Y + 1) * ObjectSize].bCollapse == false)
+				NeighborCells.Add(&CellList[Loc.X + (Loc.Y + 1) * ObjectSize]);
+			else
+				NeighborCells.Add(nullptr);
+			//NY
+			if (Loc.Y - 1 >= 0 && CellList[Loc.X + (Loc.Y - 1) * ObjectSize].bCollapse == false)
+				NeighborCells.Add(&CellList[Loc.X + (Loc.Y - 1) * ObjectSize]);
+			else
+				NeighborCells.Add(nullptr);
+
+			bool bHaveNeighbor = false;
+			for (const FWFCCell* ptr : NeighborCells)
+			{
+				if (ptr != nullptr)
+				{
+					bHaveNeighbor = true;
+					break;
+				}
+			}
+			if (bHaveNeighbor == false)
+			{
+				//结束Propagation
+				break;;
+			}
+
+			//0, 1, 2, 3分别代表px, nx , py, ny
+			int32 DirectionIndex = 0;
+			for (FWFCCell* CurrPropagationCell : NeighborCells)
+			{
+				if (CurrPropagationCell != nullptr && CurrPropagationCell->bDirty == false && CurrPropagationCell->bCollapse == false)
+				{
+					bool bObseved = Observation(*LastPropagationCell, *CurrPropagationCell, DirectionIndex);
+					if (bObseved == true)
+					{
+						CurrPropagationCell->bDirty = true;
+						CurrPropagationCellsArrayPtr->Add(CurrPropagationCell);
+					}
+				}
+				DirectionIndex++;
+			}
+		}
+
+		LastPropagationCellsArrayPtr->Reset();
+		TArray<FWFCCell*>* TempPtr = LastPropagationCellsArrayPtr;
+		LastPropagationCellsArrayPtr = CurrPropagationCellsArrayPtr;
+		CurrPropagationCellsArrayPtr = TempPtr;
+	}
 }
 
