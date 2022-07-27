@@ -93,13 +93,13 @@ public:
 	FProto GetCollapseProtoCopy(int32 Index)
 	{
 		if (CellList[Index].bCollapse) return *CellList[Index].PotentialProto[0];
-		else FProto();
+		else return FProto();
 	}
 
 	void Propagation();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SimpleWFC")
-	int32 CellSize=0;
+	int32 CellSize=10;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SimpleWFC")
 	int32 ObjectBoundBoxSize=210;
 	int32 ObjectSize;

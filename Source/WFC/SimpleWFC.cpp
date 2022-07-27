@@ -32,7 +32,7 @@ ASimpleWFC::ASimpleWFC(const FObjectInitializer& ObjectInitializer)
 
 	CellLIndexTree =new TQuadTree<uint32>(RootBox);
 
-	ObjectSize=ObjectBoundBoxSize/CellSize;
+	ObjectSize = ObjectBoundBoxSize / CellSize;
 	uint32 CellNum=ObjectSize*ObjectSize;
 
 	//Proto_None
