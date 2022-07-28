@@ -48,5 +48,5 @@ public:
 	TMap<EDirection,FAllowedType> LinkRule;
 
 	ACube();
-	ACube(const ACube& Cube);
+	//ACube(const ACube& Cube);
 };

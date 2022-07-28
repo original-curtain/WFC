@@ -12,14 +12,14 @@ ACube::ACube()
 	AllPossiableCubeTypeArr.Add(ECubeType::Water);
 }
 
-ACube::ACube(const ACube& Cube)
-{
-	AllPossiableCubeTypeArr.Empty();
-	for each (ECubeType CubeType in Cube.AllPossiableCubeTypeArr)
-	{
-		AllPossiableCubeTypeArr.Add(CubeType);
-	}
-	CubeType=Cube.CubeType;
-	IsObserved =Cube.IsObserved;
-}
+//ACube::ACube(const ACube& Cube)
+//{
+//	AllPossiableCubeTypeArr.Empty();
+//	for each (ECubeType CubeType in Cube.AllPossiableCubeTypeArr)
+//	{
+//		AllPossiableCubeTypeArr.Add(CubeType);
+//	}
+//	CubeType=Cube.CubeType;
+//	IsObserved =Cube.IsObserved;
+//}
 
