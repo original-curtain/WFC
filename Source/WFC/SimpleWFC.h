@@ -33,6 +33,7 @@ enum class EProtoType :uint8
 USTRUCT(BlueprintType)
 struct FProto
 {
+
 	GENERATED_BODY()
 public:
 	UPROPERTY(VisibleDefaultsOnly,BlueprintReadOnly,Category="Proto")
