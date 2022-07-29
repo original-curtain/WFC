@@ -81,7 +81,7 @@ void ATerrain::Collapse(TArray<ECubeType> RuleAllowedCubeTypeArr, int CollapseX,
 	TArray<ECubeType> FinalAllowedCubeTypeArr;
 	for (int i = 0; i < RuleAllowedCubeTypeArr.Num(); i++)
 	{
-		if (TerrainMatrix[CollapseX][CollapseY].AllPossiableCubeTypeArr.Find(RuleAllowedCubeTypeArr[i]))
+		if (TerrainMatrix[CollapseX][CollapseY].AllPossiableCubeTypeArr.Find(RuleAllowedCubeTypeArr[i])!=INDEX_NONE)
 		{
 			FinalAllowedCubeTypeArr.Add(RuleAllowedCubeTypeArr[i]);
 		}
