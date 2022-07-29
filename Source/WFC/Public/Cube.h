@@ -12,41 +12,21 @@ enum class ECubeType :uint8
 	None,
 	Soil,
 	Grass,
-	Water
-};
-
-UENUM(BlueprintType)
-enum class EDirection :uint8
-{
-	Back,
-	Front,
-	Left,
-	Right
-};
-
-USTRUCT(BlueprintType)
-struct FAllowedType
-{
-	GENERATED_BODY()
-public:
-	UPROPERTY()
-	TArray<ECubeType> AllowedType;
+	Water,
 };
 
 UCLASS()
-class ACube : public AActor
+class WFC_API ACube : public AActor
 {
 	GENERATED_BODY()
+	
+public:	
 
-public:
-	ECubeType CubeType = ECubeType::None;
-	bool IsObserved = false;
-	TArray<ECubeType> AllPossiableCubeTypeArr;
-
-	UPROPERTY(EditAnywhere, Category = "WFC")
-	//∆¥Ω”πÊ‘Ú
-	TMap<EDirection,FAllowedType> LinkRule;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WFC")
+	UStaticMeshComponent* CubeMeshComponent;
+	
 	ACube();
-	//ACube(const ACube& Cube);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void Spawn(ECubeType CubeType);
 };

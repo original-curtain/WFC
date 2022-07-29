@@ -6,20 +6,8 @@
 ACube::ACube()
 {
 	PrimaryActorTick.bCanEverTick = false;
-
-	AllPossiableCubeTypeArr.Add(ECubeType::Soil);
-	AllPossiableCubeTypeArr.Add(ECubeType::Grass);
-	AllPossiableCubeTypeArr.Add(ECubeType::Water);
+	
+	CubeMeshComponent=CreateDefaultSubobject<UStaticMeshComponent>(FName("Cube"));
+	SetRootComponent(CubeMeshComponent);
 }
-
-//ACube::ACube(const ACube& Cube)
-//{
-//	AllPossiableCubeTypeArr.Empty();
-//	for each (ECubeType CubeType in Cube.AllPossiableCubeTypeArr)
-//	{
-//		AllPossiableCubeTypeArr.Add(CubeType);
-//	}
-//	CubeType=Cube.CubeType;
-//	IsObserved =Cube.IsObserved;
-//}
 

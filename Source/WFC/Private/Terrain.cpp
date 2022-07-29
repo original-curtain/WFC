@@ -9,26 +9,30 @@ ATerrain::ATerrain()
 
 	for (int i = 0; i < CubeNum; i++)
 	{
-		TerrainMatrix.Add(TArray<ACube>());
+		TerrainMatrix.Add(TArray<FCell>());
 		for (int j = 0; j < CubeNum; j++)
 		{
-			TerrainMatrix[i].Add(ACube());
+			FCell Cell;
+			Cell.AllPossiableCubeTypeArr.Add(ECubeType::Soil);
+			Cell.AllPossiableCubeTypeArr.Add(ECubeType::Grass);
+			Cell.AllPossiableCubeTypeArr.Add(ECubeType::Water);
+			TerrainMatrix[i].Add(Cell);
 		}
 	}
 }
 
-float ATerrain::GetEntropy(ACube Cube)
+float ATerrain::GetEntropy(FCell Cell)
 {
-	float Entropy=0.f;
-	for (int i = 0; i < Cube.AllPossiableCubeTypeArr.Num(); i++)
+	float Entropy = 0.f;
+	for (int i = 0; i < Cell.AllPossiableCubeTypeArr.Num(); i++)
 	{
-		float P = 1.f / Cube.AllPossiableCubeTypeArr.Num();
+		float P = 1.f / Cell.AllPossiableCubeTypeArr.Num();
 		Entropy += P * FMath::Log2(P);
 	}
 	return Entropy;
 }
 
-void ATerrain::Observe(int X,int Y)
+bool ATerrain::Observe(int X, int Y)
 {
 	if (X >= 0 && X < CubeNum && Y >= 0 && Y < CubeNum)
 	{
@@ -37,39 +41,42 @@ void ATerrain::Observe(int X,int Y)
 			int Idx = FMath::RandRange(0, TerrainMatrix[X][Y].AllPossiableCubeTypeArr.Num() - 1);
 			TerrainMatrix[X][Y].CubeType = TerrainMatrix[X][Y].AllPossiableCubeTypeArr[Idx];
 			TerrainMatrix[X][Y].IsObserved = true;
-			Propagate(X,Y);
+			SpawnCube(TerrainMatrix[X][Y].CubeType,X,Y);
+			Propagate(X, Y);
+			return true;
 		}
 	}
+	return false;
 }
 
 void ATerrain::Propagate(int OriginalX, int OriginalY)
 {
-	if(!TerrainMatrix[OriginalX][OriginalY].IsObserved) return;
+	if (!TerrainMatrix[OriginalX][OriginalY].IsObserved) return;
 
 	//front
 	if (OriginalY - 1 >= 0 && !TerrainMatrix[OriginalX][OriginalY - 1].IsObserved)
 	{
-		Collapse(TerrainMatrix[OriginalX][OriginalY].LinkRule[EDirection::Front].AllowedType, OriginalX, OriginalY - 1);
+		Collapse(LinkRule[TerrainMatrix[OriginalX][OriginalY].CubeType].Front, OriginalX, OriginalY - 1);
 	}
 	//back
 	if (OriginalY + 1 < CubeNum && !TerrainMatrix[OriginalX][OriginalY + 1].IsObserved)
 	{
-		Collapse(TerrainMatrix[OriginalX][OriginalY].LinkRule[EDirection::Back].AllowedType, OriginalX, OriginalY + 1);
+		Collapse(LinkRule[TerrainMatrix[OriginalX][OriginalY].CubeType].Back, OriginalX, OriginalY + 1);
 	}
 
 	//left
-	if (OriginalX - 1 >= 0 && !TerrainMatrix[OriginalX-1][OriginalY].IsObserved)
+	if (OriginalX - 1 >= 0 && !TerrainMatrix[OriginalX - 1][OriginalY].IsObserved)
 	{
-		Collapse(TerrainMatrix[OriginalX][OriginalY].LinkRule[EDirection::Left].AllowedType, OriginalX-1, OriginalY);
+		Collapse(LinkRule[TerrainMatrix[OriginalX][OriginalY].CubeType].Left, OriginalX - 1, OriginalY);
 	}
 	//right
-	if (OriginalX + 1 < CubeNum && !TerrainMatrix[OriginalX+1][OriginalY].IsObserved)
+	if (OriginalX + 1 < CubeNum && !TerrainMatrix[OriginalX + 1][OriginalY].IsObserved)
 	{
-		Collapse(TerrainMatrix[OriginalX][OriginalY].LinkRule[EDirection::Right].AllowedType, OriginalX+1, OriginalY);
+		Collapse(LinkRule[TerrainMatrix[OriginalX][OriginalY].CubeType].Right, OriginalX + 1, OriginalY);
 	}
 }
 
-void ATerrain::Collapse(TArray<ECubeType> RuleAllowedCubeTypeArr,int CollapseX,int CollapseY)
+void ATerrain::Collapse(TArray<ECubeType> RuleAllowedCubeTypeArr, int CollapseX, int CollapseY)
 {
 	TArray<ECubeType> FinalAllowedCubeTypeArr;
 	for (int i = 0; i < RuleAllowedCubeTypeArr.Num(); i++)
@@ -83,9 +90,31 @@ void ATerrain::Collapse(TArray<ECubeType> RuleAllowedCubeTypeArr,int CollapseX,i
 	TerrainMatrix[CollapseX][CollapseY].AllPossiableCubeTypeArr = FinalAllowedCubeTypeArr;
 	if (FinalAllowedCubeTypeArr.Num() == 1)
 	{
-		TerrainMatrix[CollapseX][CollapseY].CubeType = FinalAllowedCubeTypeArr[0];
-		TerrainMatrix[CollapseX][CollapseY].IsObserved = true;
-		Propagate(CollapseX, CollapseY);
+		Observe(CollapseX,CollapseY);
 	}
 }
 
+void ATerrain::SpawnCube(ECubeType CubeType, int SpawnX, int SpawnY)
+{
+	FVector WorldLoc=LocalToWorld(FVector(SpawnX,SpawnY,0));
+	FActorSpawnParameters SpawnInfo;
+	ACube* Cube=GetWorld()->SpawnActor<ACube>(CubeClass, WorldLoc, FRotator(0.f, 0.f, 0.f), SpawnInfo);
+	Cube->Spawn(CubeType);
+}
+
+FVector ATerrain::LocalToWorld(FVector LocalLoc)
+{
+	FVector WorldLoc;
+	WorldLoc.X=LocalLoc.Y*100+50;
+	WorldLoc.Y=LocalLoc.X*100+50;
+	WorldLoc.Z=70.f;
+	return WorldLoc;
+}
+
+FVector ATerrain::WorldToLocal(FVector WorldLoc)
+{
+	FVector LocalLoc;
+	LocalLoc.X=WorldLoc.Y/100;
+	LocalLoc.Y=WorldLoc.X/100;
+	return LocalLoc;
+}
