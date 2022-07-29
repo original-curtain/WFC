@@ -31,7 +31,7 @@ void ATerrain::Tick(float DeltaSeconds)
 		ACube* Cube;
 		SpawnQueue.Dequeue(Cube);
 		Cube->Spawn(Cube->CurType);
-		GetWorldTimerManager().SetTimer(UnusedHandle,this,&ATerrain::EnableSpawn,0.4f,false);
+		GetWorldTimerManager().SetTimer(UnusedHandle,this,&ATerrain::EnableSpawn,0.2f,false);
 	}
 }
 
@@ -50,39 +50,20 @@ void ATerrain::WFC(int X,int Y)
 {
 	if(X<0||X>=CubeNum||Y<0||Y>=CubeNum) return;
 
-	for (int i = X; i < CubeNum; i++)
-	{
-		for (int j = Y; j < CubeNum; j++)
-		{
-			if (!TerrainMatrix[i][j].IsObserved)
-			{
-				Observe(i,j);
-			}
-		}
-		for (int j = Y; j >= 0; j--)
-		{
-			if (!TerrainMatrix[i][j].IsObserved)
-			{
-				Observe(i, j);
-			}
-		}
-	}
+	ObserveQueue.Enqueue(FVector2D(X,Y));
 
-	for (int i = X; i >= 0; i--)
+	while (!ObserveQueue.IsEmpty())
 	{
-		for (int j = Y; j < CubeNum; j++)
+		FVector2D ObserveLoc;
+		ObserveQueue.Dequeue(ObserveLoc);
+		if (!TerrainMatrix[ObserveLoc.X][ObserveLoc.Y].IsObserved)
 		{
-			if (!TerrainMatrix[i][j].IsObserved)
-			{
-				Observe(i, j);
-			}
-		}
-		for (int j = Y; j >= 0; j--)
-		{
-			if (!TerrainMatrix[i][j].IsObserved)
-			{
-				Observe(i, j);
-			}
+			Observe(ObserveLoc.X, ObserveLoc.Y);
+
+			if (ObserveLoc.Y - 1 >= 0) ObserveQueue.Enqueue(FVector2D(ObserveLoc.X, ObserveLoc.Y - 1));
+			if (ObserveLoc.X + 1 < CubeNum) ObserveQueue.Enqueue(FVector2D(ObserveLoc.X + 1, ObserveLoc.Y));
+			if (ObserveLoc.Y + 1 < CubeNum) ObserveQueue.Enqueue(FVector2D(ObserveLoc.X, ObserveLoc.Y + 1));
+			if (ObserveLoc.X - 1 >= 0) ObserveQueue.Enqueue(FVector2D(ObserveLoc.X - 1, ObserveLoc.Y));
 		}
 	}
 }

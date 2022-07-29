@@ -46,6 +46,8 @@ public:
 	bool InSpawn=false;
 	FTimerHandle UnusedHandle;
 
+	TQueue<FVector2D> ObserveQueue;
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="WFC")
 	TSubclassOf<ACube> CubeClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WFC")
