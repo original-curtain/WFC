@@ -5,7 +5,7 @@
 
 ATerrain::ATerrain()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	for (int i = 0; i < CubeNum; i++)
 	{
@@ -21,6 +21,20 @@ ATerrain::ATerrain()
 	}
 }
 
+void ATerrain::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!SpawnQueue.IsEmpty() && !InSpawn)
+	{
+		InSpawn=true;
+		ACube* Cube;
+		SpawnQueue.Dequeue(Cube);
+		Cube->Spawn(Cube->CurType);
+		GetWorldTimerManager().SetTimer(UnusedHandle,this,&ATerrain::EnableSpawn,0.4f,false);
+	}
+}
+
 float ATerrain::GetEntropy(FCell Cell)
 {
 	float Entropy = 0.f;
@@ -30,6 +44,47 @@ float ATerrain::GetEntropy(FCell Cell)
 		Entropy += P * FMath::Log2(P);
 	}
 	return Entropy;
+}
+
+void ATerrain::WFC(int X,int Y)
+{
+	if(X<0||X>=CubeNum||Y<0||Y>=CubeNum) return;
+
+	for (int i = X; i < CubeNum; i++)
+	{
+		for (int j = Y; j < CubeNum; j++)
+		{
+			if (!TerrainMatrix[i][j].IsObserved)
+			{
+				Observe(i,j);
+			}
+		}
+		for (int j = Y; j >= 0; j--)
+		{
+			if (!TerrainMatrix[i][j].IsObserved)
+			{
+				Observe(i, j);
+			}
+		}
+	}
+
+	for (int i = X; i >= 0; i--)
+	{
+		for (int j = Y; j < CubeNum; j++)
+		{
+			if (!TerrainMatrix[i][j].IsObserved)
+			{
+				Observe(i, j);
+			}
+		}
+		for (int j = Y; j >= 0; j--)
+		{
+			if (!TerrainMatrix[i][j].IsObserved)
+			{
+				Observe(i, j);
+			}
+		}
+	}
 }
 
 bool ATerrain::Observe(int X, int Y)
@@ -99,7 +154,8 @@ void ATerrain::SpawnCube(ECubeType CubeType, int SpawnX, int SpawnY)
 	FVector WorldLoc=LocalToWorld(FVector(SpawnX,SpawnY,0));
 	FActorSpawnParameters SpawnInfo;
 	ACube* Cube=GetWorld()->SpawnActor<ACube>(CubeClass, WorldLoc, FRotator(0.f, 0.f, 0.f), SpawnInfo);
-	Cube->Spawn(CubeType);
+	Cube->CurType=CubeType;
+	SpawnQueue.Enqueue(Cube);
 }
 
 FVector ATerrain::LocalToWorld(FVector LocalLoc)
@@ -117,4 +173,9 @@ FVector ATerrain::WorldToLocal(FVector WorldLoc)
 	LocalLoc.X=WorldLoc.Y/100;
 	LocalLoc.Y=WorldLoc.X/100;
 	return LocalLoc;
+}
+
+void ATerrain::EnableSpawn()
+{
+	InSpawn=false;
 }

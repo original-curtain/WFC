@@ -21,6 +21,8 @@ class WFC_API ACube : public AActor
 	GENERATED_BODY()
 	
 public:	
+	UPROPERTY(BlueprintReadOnly, Category = "WFC")
+	ECubeType CurType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WFC")
 	UStaticMeshComponent* CubeMeshComponent;

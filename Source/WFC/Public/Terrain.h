@@ -42,14 +42,23 @@ public:
 	int CubeNum = 10;
 	TArray<TArray<FCell>> TerrainMatrix;
 
+	TQueue<ACube*> SpawnQueue;
+	bool InSpawn=false;
+	FTimerHandle UnusedHandle;
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="WFC")
 	TSubclassOf<ACube> CubeClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WFC")
 	TMap<ECubeType, FLinkRule> LinkRule;
 
 	ATerrain();
+
+	virtual void Tick(float DeltaSeconds) override;
 	//获取当前单元格的熵值
 	float GetEntropy(FCell Cell);
+	UFUNCTION(BlueprintCallable)
+	//波函数坍塌，即自动观测
+	void WFC(int X,int Y);
 	UFUNCTION(BlueprintCallable)
 	//指定位置观测,返回是否塌缩
 	bool Observe(int X, int Y);
@@ -67,5 +76,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	//世界坐标转化成本地坐标
 	FVector WorldToLocal(FVector WorldLoc);
+
+	void EnableSpawn();
 };
 
